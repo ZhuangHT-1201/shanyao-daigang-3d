@@ -1,0 +1,10 @@
+* text=auto
+*.cmd text eol=crlf
+*.js text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.py text eol=lf
+*.jpg binary
+*.png binary

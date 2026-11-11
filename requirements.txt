@@ -1,0 +1,5 @@
+duckdb>=1.0
+ijson>=3.2
+Pillow>=10.0
+requests>=2.31
+shapely>=2.0

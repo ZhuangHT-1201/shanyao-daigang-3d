@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.vite/
+research/
+__pycache__/
+*.log
+.DS_Store
+Thumbs.db
+
+# Esri imagery is fetched locally and is not redistributed by this repository.
+public/data/satellite_basemap.jpg
+public/data/oldstreet_satellite.jpg
+
+# Earlier previews are kept locally for comparison but are not part of the
+# current open-source release.
+screenshots/historic-houses.png
+screenshots/mobile.png
+screenshots/night-rain.png
+screenshots/overview.png
+screenshots/saltpan.png
+screenshots/temple.png

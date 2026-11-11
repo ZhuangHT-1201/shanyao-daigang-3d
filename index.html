@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="山腰埭港 3D 数字小镇：以福建泉州泉港区山腰街道埭港村为原型的交互式三维文化漫游。"
+    />
+    <meta name="theme-color" content="#1b2d2b" />
+    <title>山腰 · 埭港 | 真实街区漫游</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <main id="app" class="app" data-ready="false">
+      <div id="scene" class="scene" aria-label="埭港村交互式三维场景"></div>
+
+      <div class="atmosphere" aria-hidden="true">
+        <div class="vignette"></div>
+        <div class="grain"></div>
+      </div>
+
+      <header class="masthead">
+        <div class="brand-lockup">
+          <div class="brand-mark" aria-hidden="true">埭</div>
+          <div>
+            <p class="eyebrow">福建 · 泉州 · 泉港</p>
+            <h1>山腰 <span>埭港</span></h1>
+          </div>
+        </div>
+        <div class="status-cluster">
+          <button id="soundButton" class="round-button icon-sound" type="button" aria-pressed="false" aria-label="开启环境声景">
+            <span class="sound-bars" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="sr-only">环境声景</span>
+          </button>
+          <button id="helpButton" class="round-button help-glyph" type="button" aria-label="查看操作帮助">?</button>
+        </div>
+      </header>
+
+      <aside id="tourPanel" class="tour-panel" aria-label="地点导览">
+        <div class="panel-heading">
+          <p class="eyebrow">沿着旧路，慢慢走</p>
+          <h2>山腰街区</h2>
+        </div>
+        <p class="panel-copy">
+          塔山下，盐田旁。六座自然村沿街巷舒展，石厝、庙宇、盐田和养殖人家的日常在这里交叠。
+        </p>
+        <div class="data-note">
+          <span class="data-dot" aria-hidden="true"></span>
+          <span>卫星底图 + 建筑轮廓 · <b id="buildingCountLabel">GBA + Overture</b></span>
+        </div>
+        <div id="poiList" class="poi-list"></div>
+        <button id="storyButton" class="text-action" type="button">
+          <span>关于这座数字小镇</span><span aria-hidden="true">↗</span>
+        </button>
+      </aside>
+
+      <section class="time-widget" aria-label="场景时间与天气">
+        <div class="time-main">
+          <p id="clock" class="clock tabular">17:42</p>
+          <div>
+            <p id="dayPhase" class="time-label">落日余晖</p>
+      <p class="time-location">山腰老街 · 埭港村 · WGS84</p>
+          </div>
+        </div>
+        <div class="time-track-wrap">
+          <input
+            id="timeRange"
+            class="time-range"
+            type="range"
+            min="5"
+            max="23"
+            step="0.1"
+            value="17.7"
+            aria-label="调整场景时间"
+          />
+          <div class="time-ticks" aria-hidden="true"><span>05</span><span>12</span><span>18</span><span>23</span></div>
+        </div>
+        <div class="weather-row">
+          <button id="rainButton" class="weather-button" type="button" aria-pressed="false">
+            <span class="weather-dot" aria-hidden="true"></span>
+            <span>海风晴朗</span>
+          </button>
+          <button id="autoTimeButton" class="mini-toggle" type="button" aria-pressed="true">
+            <span class="toggle-dot" aria-hidden="true"></span>时光流动
+          </button>
+        </div>
+      </section>
+
+      <div class="map-widget" aria-label="埭港村方位图">
+        <div class="map-heading">
+          <span>埭港村</span><span>卫星底图</span>
+        </div>
+        <canvas id="minimap" width="440" height="360" aria-label="埭港村卫星底图与地点方位"></canvas>
+        <div class="map-legend" aria-hidden="true">
+          <span><i class="legend-place"></i>地点</span>
+          <span><i class="legend-water"></i>盐田水网</span>
+        </div>
+      </div>
+
+      <div class="camera-controller" role="group" aria-label="视角控制">
+        <button class="view-button is-active" data-view="orbit" type="button" aria-pressed="true">
+          <span class="view-icon orbit-icon" aria-hidden="true"></span>漫游
+        </button>
+        <button class="view-button" data-view="walk" type="button" aria-pressed="false">
+          <span class="view-icon walk-icon" aria-hidden="true"></span>步行
+        </button>
+        <button class="view-button" data-view="tour" type="button" aria-pressed="false">
+          <span class="view-icon tour-icon" aria-hidden="true"></span>巡游
+        </button>
+        <span class="controller-divider" aria-hidden="true"></span>
+        <button id="overviewButton" class="view-button overview-button" type="button">
+          <span class="view-icon home-icon" aria-hidden="true"></span>全景
+        </button>
+      </div>
+
+      <div id="walkHint" class="walk-hint" hidden>
+        <span class="crosshair" aria-hidden="true"></span>
+        <p>点击画面锁定视角 · <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 行走 · <kbd>Shift</kbd> 加速 · <kbd>Esc</kbd> 释放鼠标</p>
+      </div>
+
+      <div id="poiToast" class="poi-toast" role="status" aria-live="polite" hidden>
+        <p id="poiToastKicker" class="eyebrow"></p>
+        <h3 id="poiToastTitle"></h3>
+        <p id="poiToastText"></p>
+        <div class="toast-footer">
+          <span id="poiToastMeta"></span>
+          <button id="exploreHereButton" type="button">走近看看</button>
+        </div>
+      </div>
+
+      <div id="reticle" class="reticle" aria-hidden="true"></div>
+
+      <div id="loadingScreen" class="loading-screen" role="status" aria-live="polite">
+        <div class="loading-content">
+          <div class="loading-seal" aria-hidden="true">埭</div>
+          <p class="loading-kicker">福建 · 泉州 · 泉港</p>
+          <h2>山腰街道</h2>
+          <p class="loading-subtitle">埭港村历史街区数字复原计划 · 初期研究版</p>
+          <p class="loading-coordinate">25.1208° N · 118.9005° E</p>
+          <div class="loading-progress">
+            <span id="loadingBar"></span>
+          </div>
+          <p id="loadingStatus" class="loading-status">正在铺开盐田与街巷</p>
+          <button id="enterTownButton" class="enter-town" type="button" hidden>
+            <span>进入街区</span><span aria-hidden="true">→</span>
+          </button>
+          <p class="loading-source">Esri World Imagery / Overture Maps / GlobalBuildingAtlas</p>
+        </div>
+      </div>
+
+      <div id="helpModal" class="modal" hidden>
+        <div class="modal-backdrop" data-close-modal="help"></div>
+        <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+          <button class="modal-close" type="button" data-close-modal="help" aria-label="关闭帮助">×</button>
+          <p class="eyebrow">漫游指南</p>
+          <h2 id="helpTitle">在埭港走一走</h2>
+          <div class="help-grid">
+            <div><span class="key-cluster"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><p>步行移动</p></div>
+            <div><span class="key-cluster"><kbd>Shift</kbd></span><p>加快脚步</p></div>
+            <div><span class="key-cluster"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd><kbd>5</kbd><kbd>6</kbd></span><p>快速前往地点</p></div>
+            <div><span class="key-cluster"><kbd>N</kbd></span><p>切换昼夜</p></div>
+            <div><span class="key-cluster"><kbd>R</kbd></span><p>切换晴雨</p></div>
+            <div><span class="key-cluster"><kbd>Esc</kbd></span><p>退出锁定视角</p></div>
+          </div>
+          <p class="modal-note">提示：拖动画面可环绕观察；滚轮拉近或退远。点击地图上的地点或右侧导览，可获得一段地点故事。</p>
+        </section>
+      </div>
+
+      <div id="storyModal" class="modal" hidden>
+        <div class="modal-backdrop" data-close-modal="story"></div>
+        <section class="modal-card story-card" role="dialog" aria-modal="true" aria-labelledby="storyTitle">
+          <button class="modal-close" type="button" data-close-modal="story" aria-label="关闭介绍">×</button>
+          <p class="eyebrow">数字地方志 · 艺术化重建</p>
+          <h2 id="storyTitle">一座关于“回家”的小镇</h2>
+          <p>
+            泉港区人民政府公开村情记载：埭港村位于山腰街道办事处东南，东傍陈庄、南临菜堂、西接锦联、北毗陈庄前埕，
+            面积约 4 平方公里，由三落、后楼、四房角、长房、面前山、石桥六个自然村组成，共 12 个村民小组。
+            山腰老街是旧山腰街道贯穿南北的商贸街，本次以老街至埭港村的连续街区为空间对象。
+          </p>
+          <p>
+            建筑占地以 Overture Maps 2026-10-21 发布中的东亚建筑细分轮廓为主，外围空白格再由 GlobalBuildingAtlas
+            补齐；GBA 的机器估算高度按最近邻传递到细分轮廓。地表与屋顶使用按 WGS84 坐标对齐的 Esri World Imagery
+            17 级正射影像，老街另叠加 18 级影像；街巷走向同时参照高德地图公开道路逐段描摹。
+            沿街立面、门窗、屋顶细节、业态招牌与人物属于视觉重建，不应视为逐户测绘或产权边界。
+          </p>
+          <div class="source-list">
+            <a href="https://www.qg.gov.cn/zwgk/zfjg/202103/t20210323_2528559.htm" target="_blank" rel="noreferrer">泉港区人民政府 · 山腰街道简介及特色</a>
+            <a href="http://www.tcmap.com.cn/fujian/quangangqu_shanyaojiedao_gangcun.html" target="_blank" rel="noreferrer">博雅地名网 · 埭港村</a>
+            <a href="https://github.com/zhu-xlab/GlobalBuildingAtlas" target="_blank" rel="noreferrer">GlobalBuildingAtlas · 建筑轮廓与高度</a>
+            <a href="https://overturemaps.org/download/" target="_blank" rel="noreferrer">Overture Maps · 2026-10-21 建筑发布</a>
+            <a href="https://doi.org/10.5281/zenodo.8174931" target="_blank" rel="noreferrer">East Asian Buildings · CC BY 4.0</a>
+            <a href="https://www.esri.com/en-us/arcgis/products/arcgis-world-imagery/overview" target="_blank" rel="noreferrer">Esri World Imagery · 卫星底图</a>
+            <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors · ODbL</a>
+          </div>
+          <p class="source-note">资料查询日期：2026 年 11 月。行政与文保级别依据 2021 年官方村情；卫星影像用于自身空间校核，公开或商业发布前需单独确认影像授权。地图坐标仅作空间定位。</p>
+        </section>
+      </div>
+
+      <div id="walkLockPrompt" class="lock-prompt" hidden>
+        <p>点击画面开始步行</p>
+      </div>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
