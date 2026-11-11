@@ -2,6 +2,8 @@
 
 > **Status: very early prototype.** This is not a finished digital twin and it is nowhere near a verified 1:1 reconstruction. The long-term goal is to build an evidence-based, street-by-street reconstruction of Shanyao Street (山腰街道), with Daigang Village (埭港村) and the old commercial street as the first study area. The project will continue to improve gradually.
 
+[GitHub repository](https://github.com/ZhuangHT-1201/shanyao-daigang-3d)
+
 ![Shanyao Street overview](screenshots/overview-2026.png)
 
 ## Why this project exists

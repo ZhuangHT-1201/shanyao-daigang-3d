@@ -2,6 +2,16 @@
   "name": "shanyao-daigang-3d",
   "private": true,
   "version": "1.0.0",
+  "description": "Early-stage, evidence-based 3D reconstruction of Shanyao Street and Daigang Village",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZhuangHT-1201/shanyao-daigang-3d.git"
+  },
+  "homepage": "https://github.com/ZhuangHT-1201/shanyao-daigang-3d#readme",
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
