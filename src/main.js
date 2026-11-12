@@ -15,6 +15,7 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 const clamp = THREE.MathUtils.clamp;
 const easeInOut = (t) =>
   t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const app = $("#app");
 const sceneRoot = $("#scene");
@@ -34,6 +35,7 @@ const storyModal = $("#storyModal");
 const storyButton = $("#storyButton");
 const walkHint = $("#walkHint");
 const walkLockPrompt = $("#walkLockPrompt");
+const cameraHint = $("#cameraHint");
 const poiToast = $("#poiToast");
 const poiToastKicker = $("#poiToastKicker");
 const poiToastTitle = $("#poiToastTitle");
@@ -93,12 +95,15 @@ composer.addPass(new OutputPass());
 const orbit = new OrbitControls(camera, renderer.domElement);
 orbit.enableDamping = true;
 orbit.dampingFactor = 0.065;
-orbit.minDistance = 8;
-orbit.maxDistance = 1500;
-orbit.minPolarAngle = 0.17;
-orbit.maxPolarAngle = Math.PI * 0.48;
-orbit.zoomSpeed = 0.75;
-orbit.panSpeed = 0.55;
+orbit.minDistance = 4;
+orbit.maxDistance = 2200;
+orbit.minPolarAngle = 0.08;
+orbit.maxPolarAngle = Math.PI * 0.495;
+orbit.zoomSpeed = 0.9;
+orbit.panSpeed = 0.72;
+orbit.rotateSpeed = 0.55;
+orbit.autoRotateSpeed = 0.22;
+orbit.enablePan = true;
 orbit.screenSpacePanning = false;
 orbit.target.set(-26, 3, -330);
 
@@ -122,6 +127,7 @@ const state = {
   frameWatchCount: 0,
   qualityChecked: false,
   lastMinimapUpdate: 0,
+  lastInteraction: 0,
 };
 
 const keys = new Set();
@@ -354,20 +360,24 @@ function setMode(mode, options = {}) {
   } else if (mode === "tour") {
     startTour();
   } else {
-    if (camera.position.y < 7) {
-      animateCameraTo(
-        [...CAMERA_PRESETS.overview.position],
-        CAMERA_PRESETS.overview.target,
-        1.8,
-        "orbit",
-      );
-    } else {
-      orbit.target.copy(options.target ?? new THREE.Vector3(-8, 4, 12));
-      orbit.enabled = true;
-    }
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward);
+    forward.y = 0;
+    if (forward.lengthSq() < 0.001) forward.set(0, 0, -1);
+    forward.normalize();
+    orbit.target.copy(
+      options.target ??
+        camera.position.clone().addScaledVector(
+          forward,
+          Math.max(12, camera.position.y * 1.6),
+        ),
+    );
+    if (camera.position.y < 1.8) camera.position.y = 1.8;
+    orbit.enabled = true;
   }
 
   state.mode = mode;
+  state.lastInteraction = performance.now() / 1000;
   $$(".view-button[data-view]").forEach((button) => {
     const active = button.dataset.view === mode;
     button.classList.toggle("is-active", active);
@@ -442,8 +452,6 @@ function selectPoi(poi, options = {}) {
     return;
   }
   state.mode = "orbit";
-  state.autoTime = true;
-  autoTimeButton.setAttribute("aria-pressed", "true");
   orbit.enabled = false;
   if (walkControls.isLocked) walkControls.unlock();
   app.classList.remove("is-walking");
@@ -455,6 +463,8 @@ function selectPoi(poi, options = {}) {
     button.setAttribute("aria-pressed", String(active));
   });
   animateCameraTo(poi.camera, poi.target, options.fast ? 1.1 : 2.2, "orbit");
+  state.lastInteraction = performance.now() / 1000;
+  cameraHint.classList.add("is-faded");
 }
 
 function setWalkAtPoi(poi) {
@@ -508,6 +518,7 @@ function goOverview() {
     1.8,
     "orbit",
   );
+  state.lastInteraction = performance.now() / 1000;
 }
 
 function enterTown() {
@@ -516,6 +527,10 @@ function enterTown() {
   app.dataset.started = "true";
   loadedAt = performance.now();
   setTime(17.7, false);
+  state.lastInteraction = performance.now() / 1000;
+  cameraHint.hidden = false;
+  cameraHint.classList.remove("is-faded");
+  window.setTimeout(() => cameraHint.classList.add("is-faded"), 7000);
   loadingScreen.classList.add("is-hidden");
   loadingScreen.setAttribute("aria-hidden", "true");
 }
@@ -600,11 +615,19 @@ function updateCameraAnimations(now) {
     camera.lookAt(target);
     orbit.target.copy(target);
   } else if (state.mode === "orbit") {
+    orbit.autoRotate =
+      state.entered &&
+      !state.modal &&
+      !prefersReducedMotion &&
+      now - state.lastInteraction > 9;
     orbit.update();
   }
 }
 
 function onPointerDown(event) {
+  state.lastInteraction = performance.now() / 1000;
+  orbit.autoRotate = false;
+  cameraHint.classList.add("is-faded");
   pointerStart = { x: event.clientX, y: event.clientY };
   if (state.mode === "walk" && !walkControls.isLocked) {
     walkControls.lock();
@@ -820,6 +843,22 @@ async function init() {
 
   renderer.domElement.addEventListener("pointerdown", onPointerDown);
   renderer.domElement.addEventListener("pointerup", onPointerUp);
+  renderer.domElement.addEventListener(
+    "wheel",
+    () => {
+      state.lastInteraction = performance.now() / 1000;
+      orbit.autoRotate = false;
+    },
+    { passive: true },
+  );
+  renderer.domElement.addEventListener(
+    "touchstart",
+    () => {
+      state.lastInteraction = performance.now() / 1000;
+      orbit.autoRotate = false;
+    },
+    { passive: true },
+  );
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
   window.addEventListener("resize", resize);

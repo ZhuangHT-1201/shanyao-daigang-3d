@@ -153,7 +153,12 @@ function buildingColor(random, kind, aerialSample = null) {
   return new THREE.Color(palette[Math.floor(random() * palette.length)]);
 }
 
-function roofColor(random, kind) {
+function roofColor(random, kind, aerialSample = null) {
+  if (aerialSample) {
+    const sampled = new THREE.Color(aerialSample.r, aerialSample.g, aerialSample.b);
+    sampled.offsetHSL((random() - 0.5) * 0.025, -0.08, 0.06 + random() * 0.06);
+    return sampled;
+  }
   if (kind === "industrial") return new THREE.Color(0x8f918c);
   if (kind === "modern") return new THREE.Color(0xa5a59c);
   const colors = [0x7d3a2f, 0x964734, 0xa4513b, 0x6f312b, 0x5f6461];
@@ -404,6 +409,44 @@ function createOldStreetShopfront({ scene, building, index, shopNames, materials
     group.add(drain);
   }
 
+  if (index % 2 === 0) {
+    addFacadeBox(
+      group,
+      materials.concreteDark,
+      0.48,
+      0.32,
+      0.4,
+      -width / 2 + 0.62,
+      0.28,
+      0.58,
+    );
+    const leafMaterial = new THREE.MeshStandardMaterial({
+      color: index % 4 === 0 ? 0x4e744b : 0x617d4e,
+      roughness: 0.96,
+      flatShading: true,
+    });
+    for (let leaf = 0; leaf < 3; leaf += 1) {
+      const foliage = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(0.24 + leaf * 0.035, 0),
+        leafMaterial,
+      );
+      foliage.position.set(
+        -width / 2 + 0.62 + (leaf - 1) * 0.12,
+        0.56 + leaf * 0.12,
+        0.58 + (leaf % 2) * 0.1,
+      );
+      foliage.castShadow = true;
+      group.add(foliage);
+    }
+  }
+
+  if (index % 5 === 1) {
+    addFacadeBox(group, materials.woodWarm, 1.55, 0.1, 0.38, width * 0.22, 0.48, 0.52);
+    for (const side of [-0.58, 0.58]) {
+      addFacadeBox(group, materials.metal, 0.06, 0.45, 0.28, width * 0.22 + side, 0.25, 0.52);
+    }
+  }
+
   scene.add(group);
 }
 
@@ -413,9 +456,6 @@ export function createRealBuildings({
   materials,
   textures,
   roads,
-  satelliteRoofMaterial = null,
-  satelliteRoofDetailMaterial = null,
-  satelliteDetailBounds = null,
   satelliteSample = null,
   progress = () => {},
 }) {
@@ -424,15 +464,14 @@ export function createRealBuildings({
   const concreteBatch = new Batch(wallMaterial(textures.graniteDark));
   const tileBatch = new Batch(roofMaterial(textures.roof));
   const templeTileBatch = new Batch(roofMaterial(textures.templeRoof));
-  const satelliteRoofBatch = satelliteRoofMaterial
-    ? new Batch(satelliteRoofMaterial)
-    : null;
-  const satelliteRoofDetailBatch = satelliteRoofDetailMaterial
-    ? new Batch(satelliteRoofDetailMaterial)
-    : null;
+  const flatTexture = textures.oldStreet.clone();
+  flatTexture.wrapS = THREE.RepeatWrapping;
+  flatTexture.wrapT = THREE.RepeatWrapping;
+  flatTexture.needsUpdate = true;
   const flatBatch = new Batch(
     new THREE.MeshStandardMaterial({
-      color: 0xb9b6a8,
+      map: flatTexture,
+      color: 0xb7b3a6,
       roughness: 0.95,
       vertexColors: true,
       side: THREE.DoubleSide,
@@ -484,42 +523,29 @@ export function createRealBuildings({
         ? "industrial"
         : "traditional";
     const random = seeded(hashString(String(feature.id || properties.id || featureIndex)));
-    const wallColor = buildingColor(random, kind, satelliteSample?.(center.x, center.z));
-    const roofTint = roofColor(random, kind);
+    const aerialSample = satelliteSample?.(center.x, center.z);
+    const wallColor = buildingColor(random, kind, aerialSample);
+    const roofTint = roofColor(random, kind, aerialSample);
     const wallBatch = kind === "industrial"
       ? concreteBatch
       : random() > 0.44
         ? plasterBatch
         : stoneBatch;
     const wallRings = rings.map((polygon) => polygon.map(cleanRing));
-    const useDetailRoof =
-      satelliteRoofDetailBatch &&
-      satelliteDetailBounds &&
-      center.x >= satelliteDetailBounds.minX &&
-      center.x <= satelliteDetailBounds.maxX &&
-      center.z >= satelliteDetailBounds.minZ &&
-      center.z <= satelliteDetailBounds.maxZ;
-    const activeSatelliteRoofBatch = useDetailRoof
-      ? satelliteRoofDetailBatch
-      : satelliteRoofBatch;
-
     if (kind === "industrial" || kind === "modern" || height > 12) {
       addFootprintWalls(wallBatch, [outer], height, wallColor);
-      addFlatRoof(
-        activeSatelliteRoofBatch || flatBatch,
-        outer,
-        height,
-        new THREE.Color(0x9b9b92),
-      );
+      addFlatRoof(flatBatch, outer, height, roofTint);
     } else {
       const roofHeight = Math.min(2.1, 0.7 + Math.sqrt(area) * 0.04);
       const wallHeight = Math.max(2.6, height - roofHeight);
       addFootprintWalls(wallBatch, [outer], wallHeight, wallColor);
       const roofBatch = nearStreet < 6 && height > 9
-        ? activeSatelliteRoofBatch || flatBatch
+        ? random() > 0.62
+          ? flatBatch
+          : tileBatch
         : random() > 0.9
           ? templeTileBatch
-          : activeSatelliteRoofBatch || tileBatch;
+          : tileBatch;
       if (roofBatch === flatBatch) addFlatRoof(flatBatch, outer, wallHeight, roofTint);
       else addHipRoof(roofBatch, outer, wallHeight, roofTint);
     }
@@ -593,8 +619,6 @@ export function createRealBuildings({
     concreteBatch,
     tileBatch,
     templeTileBatch,
-    ...(satelliteRoofBatch ? [satelliteRoofBatch] : []),
-    ...(satelliteRoofDetailBatch ? [satelliteRoofDetailBatch] : []),
     flatBatch,
     trimBatch,
   ]) {

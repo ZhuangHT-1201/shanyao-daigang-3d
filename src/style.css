@@ -672,6 +672,43 @@ a:focus-visible {
   transform: translateX(-50%);
 }
 
+.camera-hint {
+  position: absolute;
+  z-index: 8;
+  bottom: 76px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid rgba(234, 222, 198, 0.22);
+  border-radius: 999px;
+  background: rgba(15, 29, 26, 0.46);
+  color: rgba(244, 236, 219, 0.74);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+  transform: translateX(-50%);
+  backdrop-filter: blur(8px);
+  transition: opacity 600ms ease, visibility 600ms ease;
+}
+
+.camera-hint[hidden] {
+  display: none;
+}
+
+.camera-hint.is-faded {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.camera-hint i {
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgba(244, 236, 219, 0.35);
+}
+
 .view-button {
   display: flex;
   align-items: center;
@@ -1540,6 +1577,10 @@ kbd {
 
   .poi-toast {
     bottom: 178px;
+  }
+
+  .camera-hint {
+    display: none;
   }
 
   .walk-hint {

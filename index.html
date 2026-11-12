@@ -100,7 +100,7 @@
 
       <div class="camera-controller" role="group" aria-label="视角控制">
         <button class="view-button is-active" data-view="orbit" type="button" aria-pressed="true">
-          <span class="view-icon orbit-icon" aria-hidden="true"></span>漫游
+          <span class="view-icon orbit-icon" aria-hidden="true"></span>自由
         </button>
         <button class="view-button" data-view="walk" type="button" aria-pressed="false">
           <span class="view-icon walk-icon" aria-hidden="true"></span>步行
@@ -112,6 +112,10 @@
         <button id="overviewButton" class="view-button overview-button" type="button">
           <span class="view-icon home-icon" aria-hidden="true"></span>全景
         </button>
+      </div>
+
+      <div id="cameraHint" class="camera-hint" hidden>
+        <span>拖拽旋转</span><i></i><span>滚轮缩放</span><i></i><span>右键平移</span>
       </div>
 
       <div id="walkHint" class="walk-hint" hidden>
@@ -163,7 +167,7 @@
             <div><span class="key-cluster"><kbd>R</kbd></span><p>切换晴雨</p></div>
             <div><span class="key-cluster"><kbd>Esc</kbd></span><p>退出锁定视角</p></div>
           </div>
-          <p class="modal-note">提示：拖动画面可环绕观察；滚轮拉近或退远。点击地图上的地点或右侧导览，可获得一段地点故事。</p>
+          <p class="modal-note">提示：拖动旋转，滚轮缩放，右键平移；停止操作约 9 秒后镜头会缓慢环绕，任意操作即可停止。点击地图上的地点或右侧导览，可获得一段地点故事。</p>
         </section>
       </div>
 

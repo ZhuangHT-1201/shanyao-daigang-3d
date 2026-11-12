@@ -280,6 +280,7 @@ export class TownWorld {
     this.vehicles = [];
     this.smokeEmitters = [];
     this.birds = [];
+    this.cloths = [];
     this.treeData = [];
     this.labels = [];
     this.poiMarkers = [];
@@ -570,25 +571,6 @@ export class TownWorld {
       shadowCatcher.receiveShadow = true;
       shadowCatcher.renderOrder = 1;
 
-      const roofTextureFor = (sourceTexture, bounds) => {
-        const roofTexture = sourceTexture.clone();
-        roofTexture.wrapS = THREE.ClampToEdgeWrapping;
-        roofTexture.wrapT = THREE.ClampToEdgeWrapping;
-        roofTexture.anisotropy = sourceTexture.anisotropy;
-        roofTexture.repeat.set(6 / bounds.width, -6 / bounds.depth);
-        roofTexture.offset.set(-bounds.minX / bounds.width, 1 + bounds.minZ / bounds.depth);
-        roofTexture.needsUpdate = true;
-        return roofTexture;
-      };
-      const roofTexture = roofTextureFor(texture, baseBounds);
-      this.materials.satelliteRoof = new THREE.MeshBasicMaterial({
-        map: roofTexture,
-        color: 0xffffff,
-        toneMapped: false,
-        side: THREE.DoubleSide,
-      });
-      this.satelliteRoofMaterials = [this.materials.satelliteRoof];
-
       if (detailTexture) {
         detailTexture.colorSpace = THREE.SRGBColorSpace;
         detailTexture.wrapS = THREE.ClampToEdgeWrapping;
@@ -596,7 +578,6 @@ export class TownWorld {
         detailTexture.anisotropy = texture.anisotropy;
         detailTexture.needsUpdate = true;
         const detailBounds = satelliteExtent(OLDSTREET_SATELLITE_BOUNDS_WGS84);
-        this.oldstreetSatelliteBounds = detailBounds;
         const detailMaterial = new THREE.MeshBasicMaterial({
           map: detailTexture,
           color: 0xffffff,
@@ -633,14 +614,6 @@ export class TownWorld {
         detailPlane.receiveShadow = true;
         detailPlane.renderOrder = 0;
         this.satelliteMaterials.push(detailMaterial);
-        const detailRoofTexture = roofTextureFor(detailTexture, detailBounds);
-        this.materials.satelliteRoofDetail = new THREE.MeshBasicMaterial({
-          map: detailRoofTexture,
-          color: 0xffffff,
-          toneMapped: false,
-          side: THREE.DoubleSide,
-        });
-        this.satelliteRoofMaterials.push(this.materials.satelliteRoofDetail);
       }
       this.satelliteSource = "Esri World Imagery z17 + z18 detail";
     } catch (error) {
@@ -905,7 +878,7 @@ export class TownWorld {
 
   buildRoads() {
     this.roadPaths = [];
-    const satelliteActive = Boolean(this.materials.satelliteRoof);
+    const satelliteActive = Boolean(this.satelliteMaterial);
     for (const [index, road] of ROAD_PATHS.entries()) {
       const curvePoints = sampleCurve(road.points, 110);
       const shoulderMaterial = new THREE.MeshStandardMaterial({
@@ -1248,6 +1221,56 @@ export class TownWorld {
     for (const [x, z, rotation] of [[160, -720, 0.07], [102, -665, -0.08], [64, -610, 0.12]]) {
       this.addBikeRack(x, z, rotation);
     }
+
+    const road = this.roadPaths.find((item) => item.id === "shan-yao-old-street");
+    if (road) {
+      const clothColors = [0xc9bca4, 0x6d858b, 0x9e5847, 0xd9d0bc];
+      const clothMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.92,
+        side: THREE.DoubleSide,
+      });
+      for (let index = 0; index < 3; index += 1) {
+        const t = 0.47 + index * 0.045;
+        const side = index % 2 === 0 ? 1 : -1;
+        const center = road.curve.getPointAt(t);
+        const tangent = road.curve.getTangentAt(t);
+        const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+        const anchorOffset = road.width * 0.5 + 2.1;
+        const lineStart = new THREE.Vector3(
+          center.x + normal.x * anchorOffset - tangent.x * 2.5,
+          4.7,
+          center.z + normal.z * anchorOffset - tangent.z * 2.5,
+        );
+        const lineEnd = new THREE.Vector3(
+          center.x + normal.x * anchorOffset + tangent.x * 2.5,
+          4.7,
+          center.z + normal.z * anchorOffset + tangent.z * 2.5,
+        );
+        const line = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints([lineStart, lineEnd]),
+          new THREE.LineBasicMaterial({ color: 0x2b2924 }),
+        );
+        this.scene.add(line);
+        for (let piece = 0; piece < 3; piece += 1) {
+          const material = clothMaterial.clone();
+          material.color.setHex(clothColors[(index + piece) % clothColors.length]);
+          const cloth = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.05, 3, 3), material);
+          const step = (piece + 1) / 4;
+          cloth.position.set(
+            THREE.MathUtils.lerp(lineStart.x, lineEnd.x, step),
+            4.13,
+            THREE.MathUtils.lerp(lineStart.z, lineEnd.z, step),
+          );
+          cloth.rotation.y = Math.atan2(normal.x * side, normal.z * side);
+          cloth.castShadow = true;
+          cloth.userData.phase = index * 1.7 + piece * 0.8;
+          cloth.userData.baseRotationY = cloth.rotation.y;
+          this.cloths.push(cloth);
+          this.scene.add(cloth);
+        }
+      }
+    }
   }
 
   addBikeRack(x, z, rotation) {
@@ -1369,9 +1392,6 @@ export class TownWorld {
       materials: this.materials,
       textures: this.textures,
       roads: this.roadPaths,
-      satelliteRoofMaterial: this.materials.satelliteRoof,
-      satelliteRoofDetailMaterial: this.materials.satelliteRoofDetail,
-      satelliteDetailBounds: this.oldstreetSatelliteBounds,
       satelliteSample: this.sampleSatelliteColor,
       progress: (progress) => {
         this.progress(
@@ -1953,6 +1973,10 @@ export class TownWorld {
       ["#9c7a58", 2, 0.66, 4.0], ["#4c4e61", 2, 0.91, 3.4],
       ["#ae5e45", 3, 0.15, 4.0], ["#bbad88", 3, 0.49, 3.5], ["#5d7a68", 3, 0.7, 4.2],
       ["#8b5348", 4, 0.25, 3.6], ["#d3b883", 4, 0.55, 4.0], ["#4e6273", 4, 0.79, 3.8],
+      ["#815247", 0, 0.43, 3.3], ["#c3b595", 0, 0.47, 3.1],
+      ["#4e665d", 0, 0.5, 3.4], ["#a8704d", 0, 0.53, 3.0],
+      ["#687277", 0, 0.56, 3.2], ["#985f42", 0, 0.59, 3.5],
+      ["#cdb999", 0, 0.62, 3.0], ["#596f64", 0, 0.65, 3.3],
     ];
     for (const [color, pathIndex, offset, speed] of crowd) {
       const person = this.createPerson(color, false);
@@ -1962,6 +1986,35 @@ export class TownWorld {
       person.userData.direction = offset > 0.5 ? -1 : 1;
       this.people.push(person);
       this.scene.add(person);
+    }
+
+    const oldStreetCurve = this.roadPaths.find(
+      (road) => road.id === "shan-yao-old-street",
+    )?.curve;
+    if (oldStreetCurve) {
+      const locals = [
+        ["#5c4d40", 0.448, 1],
+        ["#8f4638", 0.468, -1],
+        ["#6e7b70", 0.493, 1],
+        ["#b57956", 0.517, -1],
+        ["#4e5966", 0.543, 1],
+        ["#7f6249", 0.566, -1],
+      ];
+      for (const [color, t, side] of locals) {
+        const point = oldStreetCurve.getPointAt(t);
+        const tangent = oldStreetCurve.getTangentAt(t);
+        const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+        const person = this.createPerson(color, false);
+        person.position.set(
+          point.x + normal.x * (2.9 * side),
+          0.13,
+          point.z + normal.z * (2.9 * side),
+        );
+        person.rotation.y = Math.atan2(-normal.x * side, -normal.z * side);
+        person.userData.isStatic = true;
+        this.people.push(person);
+        this.scene.add(person);
+      }
     }
 
     for (let i = 0; i < 5; i += 1) {
@@ -1994,6 +2047,28 @@ export class TownWorld {
       scooter.userData.direction = i % 2 === 0 ? 1 : -1;
       this.vehicles.push(scooter);
       this.scene.add(scooter);
+    }
+
+    if (oldStreetCurve) {
+      for (let index = 0; index < 4; index += 1) {
+        const t = 0.452 + index * 0.035;
+        const point = oldStreetCurve.getPointAt(t);
+        const tangent = oldStreetCurve.getTangentAt(t);
+        const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+        const side = index % 2 === 0 ? 1 : -1;
+        const scooter = this.createScooter(
+          [0x465a58, 0x9b4c3b, 0xd2c6a8, 0x667268][index],
+          index,
+          false,
+        );
+        scooter.position.set(
+          point.x + normal.x * (3.1 * side),
+          0.12,
+          point.z + normal.z * (3.1 * side),
+        );
+        scooter.rotation.y = Math.atan2(tangent.x, tangent.z) + (index % 2 ? 0.22 : -0.18);
+        this.scene.add(scooter);
+      }
     }
 
     const truck = this.createMiniTruck();
@@ -2061,7 +2136,7 @@ export class TownWorld {
     return group;
   }
 
-  createScooter(color, seed) {
+  createScooter(color, seed, withRider = true) {
     const group = new THREE.Group();
     const bodyMaterial = new THREE.MeshStandardMaterial({ color, roughness: 0.48, metalness: 0.16 });
     meshBox(group, bodyMaterial, 0.52, 0.22, 1.6, 0, 0.52, 0);
@@ -2073,14 +2148,16 @@ export class TownWorld {
       wheel.rotation.y = Math.PI / 2;
       group.add(wheel);
     }
-    const rider = this.createPerson(["#6b5540", "#a74335", "#536b65"][seed % 3]);
-    rider.scale.setScalar(0.72);
-    rider.position.set(0, 0.44, -0.05);
-    group.add(rider);
-    rider.userData.umbrella.visible = false;
-    // Hands replace the free-hanging arms for a readable riding silhouette.
-    rider.userData.leftArm.rotation.x = -0.9;
-    rider.userData.rightArm.rotation.x = -0.9;
+    if (withRider) {
+      const rider = this.createPerson(["#6b5540", "#a74335", "#536b65"][seed % 3]);
+      rider.scale.setScalar(0.72);
+      rider.position.set(0, 0.44, -0.05);
+      group.add(rider);
+      rider.userData.umbrella.visible = false;
+      // Hands replace the free-hanging arms for a readable riding silhouette.
+      rider.userData.leftArm.rotation.x = -0.9;
+      rider.userData.rightArm.rotation.x = -0.9;
+    }
     return group;
   }
 
@@ -2409,17 +2486,6 @@ export class TownWorld {
         material.color.copy(aerialColor);
       });
     }
-    if (this.satelliteRoofMaterials) {
-      const roofShade = 0.2 + daylight * 0.8;
-      const roofColor = new THREE.Color(
-        roofShade * (1 + golden * 0.08),
-        roofShade,
-        roofShade * (1 - golden * 0.08),
-      );
-      this.satelliteRoofMaterials.forEach((material) => {
-        material.color.copy(roofColor);
-      });
-    }
 
     this.lampLights.forEach(({ light, glow }) => {
       if (light) light.intensity = night * 9.2;
@@ -2514,6 +2580,13 @@ export class TownWorld {
       const flap = Math.sin(elapsed * 5 + data.offset * 20) * 0.35;
       data.left.rotation.z = -0.12 + flap;
       data.right.rotation.z = 0.12 - flap;
+    }
+
+    for (const cloth of this.cloths) {
+      const phase = elapsed * 1.8 + cloth.userData.phase;
+      cloth.rotation.y =
+        cloth.userData.baseRotationY + Math.sin(phase) * 0.11;
+      cloth.rotation.x = Math.sin(phase * 0.63) * 0.035;
     }
 
     for (const smoke of this.smokeEmitters) {

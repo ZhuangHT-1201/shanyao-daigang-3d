@@ -41,9 +41,10 @@ Current viewpoints include:
 - Building heights use nearby GlobalBuildingAtlas machine estimates where available; remaining heights are conservative area-based estimates.
 - A WGS84-registered satellite basemap provides roads, yards, fields, roof colours, salt-field patterns, and the wider settlement context.
 - A higher-resolution old-street image patch is blended into the base map.
-- Roof surfaces sample the same georeferenced imagery instead of using random tile colours.
-- Street-level reconstruction includes shop signs, shutters, awnings, balconies, utility poles, overhead wires, drains, and warm evening windows.
+- Roof colour is sampled from the georeferenced imagery, while tile and concrete patterns are rendered as separate materials. This avoids stretching street and neighbour pixels across sloped roofs.
+- Street-level reconstruction includes shop signs, shutters, awnings, balconies, utility poles, overhead wires, drains, planters, parked scooters, moving pedestrians, and wind-blown laundry.
 - The minimap uses the real satellite image and labels known road names.
+- The orbit camera supports free rotation, zoom, and right-button panning. After nine seconds without input it drifts slowly around the current target; any interaction stops the drift. Reduced-motion preferences disable that drift.
 
 ![Shanyao Old Street](screenshots/oldstreet-2026.png)
 
@@ -94,6 +95,7 @@ Review the provider's licence before any public deployment or commercial distrib
 - Choose **步行** (Walk), then click the scene to lock the pointer.
 - Use `WASD` or arrow keys to move and `Shift` to move faster.
 - Press `1`–`6` to visit the six current places.
+- Drag to rotate, scroll to zoom, and right-drag to pan. The camera also drifts slowly after a period of inactivity.
 - Press `N` for day/night, `R` for clear/rain, and `O` for the overview.
 - Use the timeline to control time of day.
 - Turn off **时光流动** to freeze the scene time.
